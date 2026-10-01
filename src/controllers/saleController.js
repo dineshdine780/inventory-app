@@ -119,14 +119,24 @@ const createSale = async (req, res) => {
     await existingCustomer.save({ session });
 
     // Create sale
-    const sale = new Sale({
-      customer,
-      products,
-      totalAmount,
-      paidAmount,
-      paymentStatus: paymentStatus || "Due",
-      dueDate: dueDate || null,
-    });
+    // Calculate payment status from the amounts
+let calculatedPaymentStatus = "Due";
+
+if (Number(paidAmount) >= Number(totalAmount)) {
+  calculatedPaymentStatus = "Paid";
+} else if (Number(paidAmount) > 0) {
+  calculatedPaymentStatus = "Partial";
+}
+
+// Create sale
+const sale = new Sale({
+  customer,
+  products,
+  totalAmount: Number(totalAmount),
+  paidAmount: Number(paidAmount),
+  paymentStatus: calculatedPaymentStatus,
+  dueDate: dueDate || null,
+});
 
     await sale.save({ session });
 

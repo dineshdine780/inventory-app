@@ -4,6 +4,8 @@ const dotenv = require("dotenv");
 
 const connectDB = require("./config/db");
 
+const protect = require("./middleware/authMiddleware");
+
 const productRoutes = require("./routes/productRoutes");
 const saleRoutes = require("./routes/saleRoutes");
 const customerRoutes = require("./routes/customerRoutes");
@@ -11,38 +13,81 @@ const purchaseRoutes = require("./routes/purchaseRoutes");
 const purchaseOrderRoutes = require("./routes/purchaseOrderRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reminderRoutes = require("./routes/reminderRoutes");
+const authRoutes = require("./routes/authRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 dotenv.config();
 
 const app = express();
 
-// Connect MongoDB
 connectDB();
 
-// Middleware
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
+  "https://localhost",
+  "http://localhost",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: allowedOrigins,
+    credentials: true,
   })
 );
 
 app.use(express.json());
 
-app.use("/api/products", productRoutes);
-app.use("/api/sales", saleRoutes);
-app.use("/api/customers", customerRoutes);
-app.use("/api/purchases", purchaseRoutes);
-app.use("/api/purchase-orders", purchaseOrderRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/reminders", reminderRoutes);
+app.use("/api/auth", authRoutes);
 
-// Test route
+
+app.use(
+  "/api/products",
+  protect,
+  productRoutes
+);
+
+app.use(
+  "/api/sales",
+  protect,
+  saleRoutes
+);
+
+app.use(
+  "/api/customers",
+  protect,
+  customerRoutes
+);
+
+app.use(
+  "/api/purchases",
+  protect,
+  purchaseRoutes
+);
+
+app.use(
+  "/api/purchase-orders",
+  protect,
+  purchaseOrderRoutes
+);
+
+app.use(
+  "/api/dashboard",
+  protect,
+  dashboardRoutes
+);
+
+app.use(
+  "/api/reminders",
+  protect,
+  reminderRoutes
+);
+
+app.use("/api/payments", protect, paymentRoutes);
+
+
+
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -50,9 +95,10 @@ app.get("/", (req, res) => {
   });
 });
 
+
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
