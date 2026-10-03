@@ -64,6 +64,13 @@ router.post("/upload", (req, res) => {
       });
     }
 
+    console.log("VOICE UPLOAD SUCCESS:", {
+  filename: req.file.filename,
+  size: req.file.size,
+  mimetype: req.file.mimetype,
+  userId: req.user?.id || req.user?._id,
+});
+
     return res.status(201).json({
       success: true,
       message: "Voice audio uploaded successfully",
