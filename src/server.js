@@ -16,6 +16,7 @@ const reminderRoutes = require("./routes/reminderRoutes");
 const authRoutes = require("./routes/authRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const taskRoutes = require("./routes/taskRoutes");
+const voiceRoutes = require("./routes/voiceRoutes");
 
 dotenv.config();
 
@@ -87,7 +88,7 @@ app.use(
 
 app.use("/api/payments", protect, paymentRoutes);
 app.use("/api/tasks", protect, taskRoutes);
-
+app.use("/api/voice", protect, voiceRoutes);
 
 app.get("/", (req, res) => {
   res.json({
