@@ -1,6 +1,14 @@
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+console.log(
+  "Gemini API key loaded:",
+  process.env.GEMINI_API_KEY ? "YES" : "NO"
+);
+
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 
 const connectDB = require("./config/db");
 
@@ -17,6 +25,7 @@ const authRoutes = require("./routes/authRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const voiceRoutes = require("./routes/voiceRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 dotenv.config();
 
@@ -89,6 +98,7 @@ app.use(
 app.use("/api/payments", protect, paymentRoutes);
 app.use("/api/tasks", protect, taskRoutes);
 app.use("/api/voice", protect, voiceRoutes);
+app.use("/api/ai", protect, aiRoutes);
 
 app.get("/", (req, res) => {
   res.json({
