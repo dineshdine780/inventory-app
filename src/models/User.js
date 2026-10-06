@@ -32,6 +32,21 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    geminiApiKeyEncrypted: {
+      type: String,
+      default: null,
+    },
+
+    geminiApiKeyLast4: {
+      type: String,
+      default: null,
+    },
+
+    geminiApiEnabled: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

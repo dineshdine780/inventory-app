@@ -1,12 +1,49 @@
 const { GoogleGenAI, Type } = require("@google/genai");
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+const User = require("../models/User");
+const { decrypt } = require("../utils/encryption");
 
 /*
 ==================================================
-ADD PRODUCT SCHEMA
+GET USER GEMINI AI CLIENT
+==================================================
+*/
+
+const getUserAI = async (userId) => {
+  const user = await User.findById(userId).select(
+    "geminiApiKeyEncrypted geminiApiEnabled"
+  );
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  if (!user.geminiApiEnabled) {
+    throw new Error(
+      "Gemini API key is not configured. Please add your Gemini API key in AI Settings."
+    );
+  }
+
+  if (!user.geminiApiKeyEncrypted) {
+    throw new Error(
+      "Gemini API key is not configured. Please add your Gemini API key in AI Settings."
+    );
+  }
+
+  const apiKey = decrypt(user.geminiApiKeyEncrypted);
+
+  if (!apiKey) {
+    throw new Error("Unable to decrypt Gemini API key");
+  }
+
+  return new GoogleGenAI({
+    apiKey,
+  });
+};
+
+/*
+==================================================
+PRODUCT SCHEMA
 ==================================================
 */
 
@@ -73,7 +110,7 @@ const productSchema = {
 
 /*
 ==================================================
-ADD SALE SCHEMA
+SALE SCHEMA
 ==================================================
 */
 
@@ -140,7 +177,7 @@ const saleSchema = {
 
 /*
 ==================================================
-ADD PURCHASE SCHEMA
+PURCHASE SCHEMA
 ==================================================
 */
 
@@ -211,7 +248,9 @@ UNDERSTAND PRODUCT COMMAND
 ==================================================
 */
 
-const understandProductCommand = async (text) => {
+const understandProductCommand = async (userId, text) => {
+  const ai = await getUserAI(userId);
+
   const prompt = `
 You are an AI assistant for an inventory management application.
 
@@ -286,7 +325,9 @@ UNDERSTAND SALE COMMAND
 ==================================================
 */
 
-const understandSaleCommand = async (text) => {
+const understandSaleCommand = async (userId, text) => {
+  const ai = await getUserAI(userId);
+
   const prompt = `
 You are an AI assistant for an inventory management application.
 
@@ -388,7 +429,9 @@ UNDERSTAND PURCHASE COMMAND
 ==================================================
 */
 
-const understandPurchaseCommand = async (text) => {
+const understandPurchaseCommand = async (userId, text) => {
+  const ai = await getUserAI(userId);
+
   const prompt = `
 You are an AI assistant for an inventory management application.
 
@@ -490,6 +533,114 @@ User command:
   return JSON.parse(response.text);
 };
 
+
+const understandCustomerCommand = async (userId, text) => {
+  const ai = await getUserAI(userId);
+
+  const customerSchema = {
+    type: Type.OBJECT,
+    properties: {
+      intent: {
+        type: Type.STRING,
+      },
+      customer: {
+        type: Type.OBJECT,
+        properties: {
+          name: {
+            type: Type.STRING,
+            nullable: true,
+          },
+          phone: {
+            type: Type.STRING,
+            nullable: true,
+          },
+          address: {
+            type: Type.STRING,
+            nullable: true,
+          },
+          notes: {
+            type: Type.STRING,
+            nullable: true,
+          },
+          whatsappPreference: {
+            type: Type.BOOLEAN,
+            nullable: true,
+          },
+        },
+        required: [
+          "name",
+          "phone",
+          "address",
+          "notes",
+          "whatsappPreference",
+        ],
+      },
+      missingFields: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.STRING,
+        },
+      },
+    },
+    required: ["intent", "customer", "missingFields"],
+  };
+
+  const prompt = `
+You are an AI assistant for an inventory management application.
+
+Understand the user's customer-related voice command.
+
+The user may speak in:
+- English
+- Tamil
+- Tanglish
+- Mixed Tamil and English
+
+Extract customer information accurately.
+
+Possible information:
+- Customer name
+- Phone number
+- Address
+- Notes
+- WhatsApp communication preference
+
+Examples:
+
+"Add customer Lakshmi phone 9876543210"
+"Customer name is Lakshmi, mobile 9876543210, address Salem"
+"Lakshmi oda number 9876543210"
+"Lakshmi, phone 9876543210, WhatsApp yes"
+
+Rules:
+
+1. intent must be "add_customer" for a customer creation command.
+2. Do not invent missing information.
+3. If a field is not mentioned, return null.
+4. Phone number should contain digits only when possible.
+5. whatsappPreference:
+   - true if the user clearly says WhatsApp yes/preferred.
+   - false if the user clearly says WhatsApp no/not preferred.
+   - null if not mentioned.
+6. missingFields should contain fields that are important but were not detected.
+7. Return only JSON matching the provided schema.
+
+User command:
+${text}
+`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3.5-flash-lite",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: customerSchema,
+    },
+  });
+
+  return JSON.parse(response.text);
+};
+
 /*
 ==================================================
 EXPORT
@@ -500,4 +651,5 @@ module.exports = {
   understandProductCommand,
   understandSaleCommand,
   understandPurchaseCommand,
+  understandCustomerCommand,
 };

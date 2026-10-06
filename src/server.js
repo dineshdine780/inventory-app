@@ -26,6 +26,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const voiceRoutes = require("./routes/voiceRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const aiSettingsRoutes = require("./routes/aiSettingsRoutes");
 
 dotenv.config();
 
@@ -99,6 +100,7 @@ app.use("/api/payments", protect, paymentRoutes);
 app.use("/api/tasks", protect, taskRoutes);
 app.use("/api/voice", protect, voiceRoutes);
 app.use("/api/ai", protect, aiRoutes);
+app.use("/api/ai-settings", aiSettingsRoutes);
 
 app.get("/", (req, res) => {
   res.json({
@@ -106,7 +108,6 @@ app.get("/", (req, res) => {
     message: "Inventory Backend API is running",
   });
 });
-
 
 
 const PORT = process.env.PORT || 5000;

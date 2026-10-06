@@ -6,15 +6,12 @@ const {
   understandProductCommand,
   understandSaleCommand,
   understandPurchaseCommand,
+  understandCustomerCommand,
 } = require("../services/geminiService");
 
-/*
-==================================================
-ADD PRODUCT
-POST /api/ai/understand
-==================================================
-*/
-
+// ===============================
+// PRODUCT AI
+// ===============================
 router.post("/understand", async (req, res) => {
   try {
     const { text } = req.body;
@@ -28,7 +25,10 @@ router.post("/understand", async (req, res) => {
 
     console.log("AI PRODUCT INPUT:", text);
 
-    const result = await understandProductCommand(text);
+    const result = await understandProductCommand(
+      req.user._id,
+      text
+    );
 
     console.log("AI PRODUCT OUTPUT:", result);
 
@@ -47,13 +47,9 @@ router.post("/understand", async (req, res) => {
   }
 });
 
-/*
-==================================================
-ADD SALE
-POST /api/ai/understand-sale
-==================================================
-*/
-
+// ===============================
+// SALE AI
+// ===============================
 router.post("/understand-sale", async (req, res) => {
   try {
     const { text } = req.body;
@@ -67,7 +63,10 @@ router.post("/understand-sale", async (req, res) => {
 
     console.log("AI SALE INPUT:", text);
 
-    const result = await understandSaleCommand(text);
+    const result = await understandSaleCommand(
+      req.user._id,
+      text
+    );
 
     console.log("AI SALE OUTPUT:", result);
 
@@ -86,13 +85,9 @@ router.post("/understand-sale", async (req, res) => {
   }
 });
 
-/*
-==================================================
-ADD PURCHASE
-POST /api/ai/understand-purchase
-==================================================
-*/
-
+// ===============================
+// PURCHASE AI
+// ===============================
 router.post("/understand-purchase", async (req, res) => {
   try {
     const { text } = req.body;
@@ -106,7 +101,10 @@ router.post("/understand-purchase", async (req, res) => {
 
     console.log("AI PURCHASE INPUT:", text);
 
-    const result = await understandPurchaseCommand(text);
+    const result = await understandPurchaseCommand(
+      req.user._id,
+      text
+    );
 
     console.log("AI PURCHASE OUTPUT:", result);
 
@@ -120,6 +118,42 @@ router.post("/understand-purchase", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "AI purchase processing failed",
+      error: error.message,
+    });
+  }
+});
+
+
+router.post("/understand-customer", async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Text is required",
+      });
+    }
+
+    console.log("AI CUSTOMER INPUT:", text);
+
+    const result = await understandCustomerCommand(
+      req.user._id,
+      text
+    );
+
+    console.log("AI CUSTOMER OUTPUT:", result);
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Gemini customer error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "AI customer processing failed",
       error: error.message,
     });
   }
