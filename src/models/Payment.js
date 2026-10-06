@@ -2,6 +2,14 @@ const mongoose = require("mongoose");
 
 const paymentSchema = new mongoose.Schema(
   {
+    // Owner of this payment
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
     customer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Customer",

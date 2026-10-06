@@ -15,6 +15,10 @@ const createPurchase = async (req, res) => {
       invoiceReference,
     } = req.body;
 
+    // -----------------------------
+    // BASIC VALIDATION
+    // -----------------------------
+
     if (!supplier || !supplier.trim()) {
       return res.status(400).json({
         success: false,
@@ -43,11 +47,21 @@ const createPurchase = async (req, res) => {
       });
     }
 
+    // -----------------------------
+    // START TRANSACTION
+    // -----------------------------
+
     session.startTransaction();
 
-    // Check products and increase stock
+    // -----------------------------
+    // CHECK PRODUCTS
+    // -----------------------------
+
     for (const item of products) {
-      const product = await Product.findById(item.product).session(session);
+      const product = await Product.findOne({
+        _id: item.product,
+        user: req.user._id,
+      }).session(session);
 
       if (!product) {
         await session.abortTransaction();
@@ -76,25 +90,36 @@ const createPurchase = async (req, res) => {
         });
       }
 
-      // Increase stock
-      product.currentStock += item.quantity;
+      // -----------------------------
+      // INCREASE STOCK
+      // -----------------------------
 
-      // Keep latest purchase price
-      product.purchasePrice = item.unitCost;
+      product.currentStock += Number(item.quantity);
+
+      // Update latest purchase price
+      product.purchasePrice = Number(item.unitCost);
 
       await product.save({ session });
     }
 
-    // Create purchase record
+    // -----------------------------
+    // CREATE PURCHASE
+    // -----------------------------
+
     const purchase = new Purchase({
+      user: req.user._id,
       supplier: supplier.trim(),
       products,
-      totalAmount,
+      totalAmount: Number(totalAmount),
       receivedDate,
       invoiceReference: invoiceReference?.trim() || "",
     });
 
     await purchase.save({ session });
+
+    // -----------------------------
+    // COMMIT
+    // -----------------------------
 
     await session.commitTransaction();
 

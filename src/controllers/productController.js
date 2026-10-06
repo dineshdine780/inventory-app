@@ -1,7 +1,13 @@
 const Product = require("../models/Product");
 
+// ==================================================
 // Create Product
+// ==================================================
 const createProduct = async (req, res) => {
+
+  console.log("REQ.USER:", req.user);
+console.log("REQ.USER._ID:", req.user?._id);
+console.log("REQ.USER.USERID:", req.user?.userId);
   try {
     const {
       productName,
@@ -41,8 +47,9 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // Check duplicate SKU
+    // Check duplicate SKU for THIS USER only
     const existingProduct = await Product.findOne({
+      user: req.user._id,
       sku: sku.toUpperCase(),
     });
 
@@ -54,6 +61,8 @@ const createProduct = async (req, res) => {
     }
 
     const product = await Product.create({
+      user: req.user._id,
+
       productName,
       category,
       sku,
@@ -80,10 +89,15 @@ const createProduct = async (req, res) => {
   }
 };
 
-// Get all Products
+
+// ==================================================
+// Get all Products - CURRENT USER ONLY
+// ==================================================
 const getProducts = async (req, res) => {
   try {
-    const products = await Product.find().sort({
+    const products = await Product.find({
+      user: req.user._id,
+    }).sort({
       createdAt: -1,
     });
 
@@ -102,10 +116,16 @@ const getProducts = async (req, res) => {
   }
 };
 
-// Get single Product
+
+// ==================================================
+// Get single Product - CURRENT USER ONLY
+// ==================================================
 const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
 
     if (!product) {
       return res.status(404).json({
@@ -129,7 +149,9 @@ const getProductById = async (req, res) => {
 };
 
 
-// Update Product
+// ==================================================
+// Update Product - CURRENT USER ONLY
+// ==================================================
 const updateProduct = async (req, res) => {
   try {
     const {
@@ -141,7 +163,10 @@ const updateProduct = async (req, res) => {
       reorderLevel,
     } = req.body;
 
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
 
     if (!product) {
       return res.status(404).json({
@@ -150,9 +175,10 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // Check duplicate SKU
+    // Check duplicate SKU for THIS USER only
     if (sku && sku.toUpperCase() !== product.sku) {
       const existingProduct = await Product.findOne({
+        user: req.user._id,
         sku: sku.toUpperCase(),
         _id: { $ne: req.params.id },
       });
@@ -167,9 +193,12 @@ const updateProduct = async (req, res) => {
 
     // Validate numbers
     if (
-      (sellingPrice !== undefined && Number(sellingPrice) < 0) ||
-      (purchasePrice !== undefined && Number(purchasePrice) < 0) ||
-      (reorderLevel !== undefined && Number(reorderLevel) < 0)
+      (sellingPrice !== undefined &&
+        Number(sellingPrice) < 0) ||
+      (purchasePrice !== undefined &&
+        Number(purchasePrice) < 0) ||
+      (reorderLevel !== undefined &&
+        Number(reorderLevel) < 0)
     ) {
       return res.status(400).json({
         success: false,
@@ -177,20 +206,28 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    product.productName = productName ?? product.productName;
-    product.category = category ?? product.category;
-    product.sku = sku ? sku.toUpperCase() : product.sku;
+    product.productName =
+      productName ?? product.productName;
+
+    product.category =
+      category ?? product.category;
+
+    product.sku =
+      sku ? sku.toUpperCase() : product.sku;
 
     if (sellingPrice !== undefined) {
-      product.sellingPrice = Number(sellingPrice);
+      product.sellingPrice =
+        Number(sellingPrice);
     }
 
     if (purchasePrice !== undefined) {
-      product.purchasePrice = Number(purchasePrice);
+      product.purchasePrice =
+        Number(purchasePrice);
     }
 
     if (reorderLevel !== undefined) {
-      product.reorderLevel = Number(reorderLevel);
+      product.reorderLevel =
+        Number(reorderLevel);
     }
 
     await product.save();
@@ -210,10 +247,16 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// Delete Product
+
+// ==================================================
+// Delete Product - CURRENT USER ONLY
+// ==================================================
 const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
 
     if (!product) {
       return res.status(404).json({
@@ -222,7 +265,10 @@ const deleteProduct = async (req, res) => {
       });
     }
 
-    await Product.findByIdAndDelete(req.params.id);
+    await Product.deleteOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
 
     res.status(200).json({
       success: true,
@@ -237,6 +283,7 @@ const deleteProduct = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   createProduct,

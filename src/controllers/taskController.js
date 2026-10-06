@@ -3,7 +3,9 @@ const Task = require("../models/Task");
 // Get all tasks
 const getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find().sort({ dueDate: 1 });
+    const tasks = await Task.find({
+      user: req.user._id,
+    }).sort({ dueDate: 1 });
 
     res.status(200).json({
       success: true,
@@ -31,6 +33,7 @@ const createTask = async (req, res) => {
     }
 
     const task = await Task.create({
+      user: req.user._id,
       title: title.trim(),
       dueDate,
     });
@@ -49,7 +52,6 @@ const createTask = async (req, res) => {
   }
 };
 
-
 // Update a task
 const updateTask = async (req, res) => {
   try {
@@ -62,8 +64,11 @@ const updateTask = async (req, res) => {
       });
     }
 
-    const task = await Task.findByIdAndUpdate(
-      req.params.taskId,
+    const task = await Task.findOneAndUpdate(
+      {
+        _id: req.params.taskId,
+        user: req.user._id,
+      },
       {
         title: title.trim(),
         dueDate,
@@ -95,11 +100,13 @@ const updateTask = async (req, res) => {
   }
 };
 
-
 // Toggle task completion
 const toggleTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.taskId);
+    const task = await Task.findOne({
+      _id: req.params.taskId,
+      user: req.user._id,
+    });
 
     if (!task) {
       return res.status(404).json({
@@ -109,6 +116,7 @@ const toggleTask = async (req, res) => {
     }
 
     task.completed = !task.completed;
+
     await task.save();
 
     res.status(200).json({
@@ -128,7 +136,10 @@ const toggleTask = async (req, res) => {
 // Delete a task
 const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.taskId);
+    const task = await Task.findOneAndDelete({
+      _id: req.params.taskId,
+      user: req.user._id,
+    });
 
     if (!task) {
       return res.status(404).json({

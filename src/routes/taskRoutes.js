@@ -1,4 +1,5 @@
 const express = require("express");
+
 const router = express.Router();
 
 const {
@@ -9,10 +10,16 @@ const {
   deleteTask,
 } = require("../controllers/taskController");
 
-router.get("/", getTasks);
-router.post("/", createTask);
-router.put("/:taskId", updateTask);
-router.patch("/:taskId/toggle", toggleTask);
-router.delete("/:taskId", deleteTask);
+const protect = require("../middleware/authMiddleware");
+
+router.get("/", protect, getTasks);
+
+router.post("/", protect, createTask);
+
+router.put("/:taskId", protect, updateTask);
+
+router.patch("/:taskId/toggle", protect, toggleTask);
+
+router.delete("/:taskId", protect, deleteTask);
 
 module.exports = router;

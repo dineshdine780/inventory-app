@@ -1,5 +1,8 @@
 const Customer = require("../models/Customer");
 
+// ==================================================
+// Create Customer
+// ==================================================
 const createCustomer = async (req, res) => {
   try {
     const {
@@ -24,7 +27,9 @@ const createCustomer = async (req, res) => {
       });
     }
 
+    // Check duplicate phone for THIS USER only
     const existingCustomer = await Customer.findOne({
+      user: req.user._id,
       phone: phone.trim(),
     });
 
@@ -36,6 +41,8 @@ const createCustomer = async (req, res) => {
     }
 
     const customer = await Customer.create({
+      user: req.user._id,
+
       name: name.trim(),
       phone: phone.trim(),
       whatsappPreference: Boolean(whatsappPreference),
@@ -58,9 +65,15 @@ const createCustomer = async (req, res) => {
   }
 };
 
+
+// ==================================================
+// Get All Customers - CURRENT USER ONLY
+// ==================================================
 const getCustomers = async (req, res) => {
   try {
-    const customers = await Customer.find().sort({
+    const customers = await Customer.find({
+      user: req.user._id,
+    }).sort({
       createdAt: -1,
     });
 
@@ -80,10 +93,15 @@ const getCustomers = async (req, res) => {
 };
 
 
-
+// ==================================================
+// Get Customer By ID - CURRENT USER ONLY
+// ==================================================
 const getCustomerById = async (req, res) => {
   try {
-    const customer = await Customer.findById(req.params.id);
+    const customer = await Customer.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
 
     if (!customer) {
       return res.status(404).json({
@@ -97,7 +115,10 @@ const getCustomerById = async (req, res) => {
       customer,
     });
   } catch (error) {
-    console.error("Get customer by ID error:", error);
+    console.error(
+      "Get customer by ID error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -106,6 +127,10 @@ const getCustomerById = async (req, res) => {
   }
 };
 
+
+// ==================================================
+// Update Customer - CURRENT USER ONLY
+// ==================================================
 const updateCustomer = async (req, res) => {
   try {
     const { id } = req.params;
@@ -132,7 +157,10 @@ const updateCustomer = async (req, res) => {
       });
     }
 
-    const customer = await Customer.findById(id);
+    const customer = await Customer.findOne({
+      _id: id,
+      user: req.user._id,
+    });
 
     if (!customer) {
       return res.status(404).json({
@@ -141,12 +169,33 @@ const updateCustomer = async (req, res) => {
       });
     }
 
+    // Check duplicate phone for THIS USER only
+    const existingCustomer =
+      await Customer.findOne({
+        user: req.user._id,
+        phone: phone.trim(),
+        _id: { $ne: id },
+      });
+
+    if (existingCustomer) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Customer with this phone number already exists",
+      });
+    }
+
     customer.name = name.trim();
     customer.phone = phone.trim();
+
     customer.whatsappPreference =
       Boolean(whatsappPreference);
-    customer.address = address?.trim() || "";
-    customer.notes = notes?.trim() || "";
+
+    customer.address =
+      address?.trim() || "";
+
+    customer.notes =
+      notes?.trim() || "";
 
     await customer.save();
 
@@ -156,7 +205,10 @@ const updateCustomer = async (req, res) => {
       customer,
     });
   } catch (error) {
-    console.error("Update customer error:", error);
+    console.error(
+      "Update customer error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,

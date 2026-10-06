@@ -2,6 +2,14 @@ const mongoose = require("mongoose");
 
 const saleSchema = new mongoose.Schema(
   {
+    // Owner of this sale
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
     customer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Customer",

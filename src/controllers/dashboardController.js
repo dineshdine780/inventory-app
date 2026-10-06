@@ -1,21 +1,48 @@
+const mongoose = require("mongoose");
+
 const Sale = require("../models/Sale");
 const Customer = require("../models/Customer");
 const Product = require("../models/Product");
 
 const getDashboardSummary = async (req, res) => {
   try {
-    // Start of today
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // --------------------------------
+    // CURRENT USER
+    // --------------------------------
 
-    // End of today
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    const userId = new mongoose.Types.ObjectId(
+      req.user._id
+    );
 
-    // Today's sales
+    // --------------------------------
+    // TODAY IN INDIA (IST)
+    // --------------------------------
+
+    const now = new Date();
+
+    const todayIST = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(now);
+
+    const startOfDay = new Date(
+      `${todayIST}T00:00:00+05:30`
+    );
+
+    const endOfDay = new Date(
+      `${todayIST}T23:59:59.999+05:30`
+    );
+
+    // --------------------------------
+    // TODAY'S SALES
+    // --------------------------------
+
     const todaySales = await Sale.aggregate([
       {
         $match: {
+          user: userId,
           createdAt: {
             $gte: startOfDay,
             $lte: endOfDay,
@@ -37,8 +64,19 @@ const getDashboardSummary = async (req, res) => {
         ? todaySales[0].total
         : 0;
 
-    // Pending customer payments
+    // --------------------------------
+    // PENDING PAYMENTS
+    // --------------------------------
+
     const pendingPayments = await Customer.aggregate([
+      {
+        $match: {
+          user: userId,
+          outstanding: {
+            $gt: 0,
+          },
+        },
+      },
       {
         $group: {
           _id: null,
@@ -54,16 +92,23 @@ const getDashboardSummary = async (req, res) => {
         ? pendingPayments[0].total
         : 0;
 
-    // Low stock products
-    const lowStockCount =
-      await Product.countDocuments({
-        $expr: {
-          $lte: [
-            "$currentStock",
-            "$reorderLevel",
-          ],
-        },
-      });
+    // --------------------------------
+    // LOW STOCK PRODUCTS
+    // --------------------------------
+
+    const lowStockCount = await Product.countDocuments({
+      user: userId,
+      $expr: {
+        $lte: [
+          "$currentStock",
+          "$reorderLevel",
+        ],
+      },
+    });
+
+    // --------------------------------
+    // RESPONSE
+    // --------------------------------
 
     return res.status(200).json({
       success: true,
@@ -81,8 +126,7 @@ const getDashboardSummary = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to fetch dashboard summary",
+      message: "Failed to fetch dashboard summary",
     });
   }
 };

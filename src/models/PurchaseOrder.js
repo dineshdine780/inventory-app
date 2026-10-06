@@ -2,10 +2,17 @@ const mongoose = require("mongoose");
 
 const purchaseOrderSchema = new mongoose.Schema(
   {
+    // Owner of this purchase order
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
     poNumber: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
 
@@ -63,6 +70,12 @@ const purchaseOrderSchema = new mongoose.Schema(
   {
     timestamps: true,
   }
+);
+
+
+purchaseOrderSchema.index(
+  { user: 1, poNumber: 1 },
+  { unique: true }
 );
 
 const PurchaseOrder = mongoose.model(

@@ -2,6 +2,14 @@ const mongoose = require("mongoose");
 
 const purchaseSchema = new mongoose.Schema(
   {
+    // Owner of this purchase
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
     supplier: {
       type: String,
       required: true,

@@ -13,7 +13,6 @@ const createSale = async (req, res) => {
       products,
       totalAmount,
       paidAmount,
-      paymentStatus,
       dueDate,
     } = req.body;
 
@@ -56,10 +55,14 @@ const createSale = async (req, res) => {
     // Start transaction
     session.startTransaction();
 
-    // Check customer
-    const existingCustomer = await Customer.findById(customer).session(
-      session
-    );
+    // -----------------------------------------
+    // CHECK CUSTOMER BELONGS TO LOGGED-IN USER
+    // -----------------------------------------
+
+    const existingCustomer = await Customer.findOne({
+      _id: customer,
+      user: req.user._id,
+    }).session(session);
 
     if (!existingCustomer) {
       await session.abortTransaction();
@@ -70,9 +73,15 @@ const createSale = async (req, res) => {
       });
     }
 
-    // Check every product and stock
+    // -----------------------------------------
+    // CHECK PRODUCTS + STOCK
+    // -----------------------------------------
+
     for (const item of products) {
-      const product = await Product.findById(item.product).session(session);
+      const product = await Product.findOne({
+        _id: item.product,
+        user: req.user._id,
+      }).session(session);
 
       if (!product) {
         await session.abortTransaction();
@@ -107,40 +116,55 @@ const createSale = async (req, res) => {
       await product.save({ session });
     }
 
-    // Calculate new outstanding amount
+    // -----------------------------------------
+    // CALCULATE OUTSTANDING
+    // -----------------------------------------
+
     const outstandingAmount = Math.max(
-      totalAmount - paidAmount,
+      Number(totalAmount) - Number(paidAmount),
       0
     );
 
-    // Update customer outstanding
+    // -----------------------------------------
+    // UPDATE CUSTOMER OUTSTANDING
+    // -----------------------------------------
+
     existingCustomer.outstanding += outstandingAmount;
 
     await existingCustomer.save({ session });
 
-    // Create sale
-    // Calculate payment status from the amounts
-let calculatedPaymentStatus = "Due";
+    // -----------------------------------------
+    // CALCULATE PAYMENT STATUS
+    // -----------------------------------------
 
-if (Number(paidAmount) >= Number(totalAmount)) {
-  calculatedPaymentStatus = "Paid";
-} else if (Number(paidAmount) > 0) {
-  calculatedPaymentStatus = "Partial";
-}
+    let calculatedPaymentStatus = "Due";
 
-// Create sale
-const sale = new Sale({
-  customer,
-  products,
-  totalAmount: Number(totalAmount),
-  paidAmount: Number(paidAmount),
-  paymentStatus: calculatedPaymentStatus,
-  dueDate: dueDate || null,
-});
+    if (Number(paidAmount) >= Number(totalAmount)) {
+      calculatedPaymentStatus = "Paid";
+    } else if (Number(paidAmount) > 0) {
+      calculatedPaymentStatus = "Partial";
+    }
+
+    // -----------------------------------------
+    // CREATE SALE
+    // -----------------------------------------
+
+    const sale = new Sale({
+      user: req.user._id,
+      customer,
+      products,
+      totalAmount: Number(totalAmount),
+      paidAmount: Number(paidAmount),
+      paymentStatus: calculatedPaymentStatus,
+      dueDate: dueDate || null,
+    });
 
     await sale.save({ session });
 
-    // Commit transaction
+    // -----------------------------------------
+    // COMMIT
+    // -----------------------------------------
+
     await session.commitTransaction();
 
     return res.status(201).json({
@@ -166,11 +190,29 @@ const sale = new Sale({
 };
 
 
+// ==========================================
+// GET SALES BY CUSTOMER
+// ==========================================
+
 const getSalesByCustomer = async (req, res) => {
   try {
     const { customerId } = req.params;
 
+    // Make sure customer belongs to logged-in user
+    const customer = await Customer.findOne({
+      _id: customerId,
+      user: req.user._id,
+    });
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
     const sales = await Sale.find({
+      user: req.user._id,
       customer: customerId,
     })
       .populate("customer", "name phone")

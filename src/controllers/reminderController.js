@@ -1,6 +1,8 @@
 const Reminder = require("../models/Reminder");
 const Customer = require("../models/Customer");
+const Sale = require("../models/Sale");
 
+// Create Reminder
 const createReminder = async (req, res) => {
   try {
     const {
@@ -31,7 +33,11 @@ const createReminder = async (req, res) => {
       });
     }
 
-    const existingCustomer = await Customer.findById(customer);
+    // Customer must belong to logged-in user
+    const existingCustomer = await Customer.findOne({
+      _id: customer,
+      user: req.user._id,
+    });
 
     if (!existingCustomer) {
       return res.status(404).json({
@@ -40,7 +46,25 @@ const createReminder = async (req, res) => {
       });
     }
 
+    // If linked transaction is provided,
+    // make sure the sale also belongs to current user
+    if (linkedTransaction) {
+      const existingSale = await Sale.findOne({
+        _id: linkedTransaction,
+        user: req.user._id,
+        customer: customer,
+      });
+
+      if (!existingSale) {
+        return res.status(404).json({
+          success: false,
+          message: "Linked transaction not found",
+        });
+      }
+    }
+
     const reminder = await Reminder.create({
+      user: req.user._id,
       customer,
       reminderDate,
       purpose: purpose.trim(),
@@ -62,11 +86,26 @@ const createReminder = async (req, res) => {
   }
 };
 
+// Get reminders for one customer
 const getCustomerReminders = async (req, res) => {
   try {
     const { customerId } = req.params;
 
+    // First verify customer belongs to current user
+    const customer = await Customer.findOne({
+      _id: customerId,
+      user: req.user._id,
+    });
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
     const reminders = await Reminder.find({
+      user: req.user._id,
       customer: customerId,
     })
       .populate("linkedTransaction", "totalAmount paymentStatus")
@@ -87,11 +126,12 @@ const getCustomerReminders = async (req, res) => {
   }
 };
 
-
-
+// Get all reminders for current user
 const getAllReminders = async (req, res) => {
   try {
-    const reminders = await Reminder.find()
+    const reminders = await Reminder.find({
+      user: req.user._id,
+    })
       .populate("customer", "name phone")
       .populate("linkedTransaction", "totalAmount paymentStatus")
       .sort({ reminderDate: 1 });
@@ -111,7 +151,7 @@ const getAllReminders = async (req, res) => {
   }
 };
 
-
+// Update reminder status
 const updateReminderStatus = async (req, res) => {
   try {
     const { reminderId } = req.params;
@@ -124,8 +164,11 @@ const updateReminderStatus = async (req, res) => {
       });
     }
 
-    const reminder = await Reminder.findByIdAndUpdate(
-      reminderId,
+    const reminder = await Reminder.findOneAndUpdate(
+      {
+        _id: reminderId,
+        user: req.user._id,
+      },
       { completed },
       { new: true, runValidators: true }
     );
@@ -152,11 +195,15 @@ const updateReminderStatus = async (req, res) => {
   }
 };
 
-
+// Update reminder
 const updateReminder = async (req, res) => {
   try {
     const { reminderId } = req.params;
-    const { reminderDate, purpose, linkedTransaction } = req.body;
+    const {
+      reminderDate,
+      purpose,
+      linkedTransaction,
+    } = req.body;
 
     const updates = {};
 
@@ -167,27 +214,53 @@ const updateReminder = async (req, res) => {
           message: "Invalid reminder date",
         });
       }
+
       updates.reminderDate = reminderDate;
     }
 
     if (purpose !== undefined) {
-      if (typeof purpose !== "string" || !purpose.trim()) {
+      if (
+        typeof purpose !== "string" ||
+        !purpose.trim()
+      ) {
         return res.status(400).json({
           success: false,
           message: "Reminder purpose is required",
         });
       }
+
       updates.purpose = purpose.trim();
     }
 
     if (linkedTransaction !== undefined) {
-      updates.linkedTransaction = linkedTransaction || null;
+      if (linkedTransaction) {
+        const existingSale = await Sale.findOne({
+          _id: linkedTransaction,
+          user: req.user._id,
+        });
+
+        if (!existingSale) {
+          return res.status(404).json({
+            success: false,
+            message: "Linked transaction not found",
+          });
+        }
+      }
+
+      updates.linkedTransaction =
+        linkedTransaction || null;
     }
 
-    const reminder = await Reminder.findByIdAndUpdate(
-      reminderId,
+    const reminder = await Reminder.findOneAndUpdate(
+      {
+        _id: reminderId,
+        user: req.user._id,
+      },
       updates,
-      { new: true, runValidators: true }
+      {
+        new: true,
+        runValidators: true,
+      }
     );
 
     if (!reminder) {
@@ -204,6 +277,7 @@ const updateReminder = async (req, res) => {
     });
   } catch (error) {
     console.error("Update reminder error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to update reminder",
@@ -211,11 +285,13 @@ const updateReminder = async (req, res) => {
   }
 };
 
+// Delete reminder
 const deleteReminder = async (req, res) => {
   try {
-    const reminder = await Reminder.findByIdAndDelete(
-      req.params.reminderId
-    );
+    const reminder = await Reminder.findOneAndDelete({
+      _id: req.params.reminderId,
+      user: req.user._id,
+    });
 
     if (!reminder) {
       return res.status(404).json({
@@ -230,13 +306,13 @@ const deleteReminder = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete reminder error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to delete reminder",
     });
   }
 };
-
 
 module.exports = {
   createReminder,

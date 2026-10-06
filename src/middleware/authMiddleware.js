@@ -2,7 +2,6 @@ const jwt = require("jsonwebtoken");
 
 const protect = (req, res, next) => {
   try {
-    // Get Authorization header
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
@@ -12,8 +11,6 @@ const protect = (req, res, next) => {
       });
     }
 
-    // Expected format:
-    // Authorization: Bearer TOKEN
     const parts = authHeader.split(" ");
 
     if (
@@ -28,14 +25,16 @@ const protect = (req, res, next) => {
 
     const token = parts[1];
 
-    // Verify JWT
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET
     );
 
-    // Store authenticated user information
-    req.user = decoded;
+    // IMPORTANT
+    req.user = {
+      _id: decoded.userId,
+      role: decoded.role,
+    };
 
     next();
   } catch (error) {

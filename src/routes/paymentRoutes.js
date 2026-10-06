@@ -5,10 +5,16 @@ const {
   getPaymentsByCustomer,
 } = require("../controllers/paymentController");
 
+const protect = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-router.post("/", createPayment);
+router.post("/", protect, createPayment);
 
-router.get("/customer/:customerId", getPaymentsByCustomer);
+router.get(
+  "/customer/:customerId",
+  protect,
+  getPaymentsByCustomer
+);
 
 module.exports = router;

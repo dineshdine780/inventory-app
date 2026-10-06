@@ -2,6 +2,14 @@ const mongoose = require("mongoose");
 
 const reminderSchema = new mongoose.Schema(
   {
+    // Owner of this reminder
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
     customer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Customer",

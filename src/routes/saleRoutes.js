@@ -5,10 +5,12 @@ const {
   getSalesByCustomer,
 } = require("../controllers/saleController");
 
+const protect = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-router.post("/", createSale);
+router.post("/", protect, createSale);
 
-router.get("/customer/:customerId", getSalesByCustomer);
+router.get("/customer/:customerId", protect, getSalesByCustomer);
 
 module.exports = router;

@@ -7,14 +7,13 @@ const {
   updateCustomer,
 } = require("../controllers/customerController");
 
+const protect = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-router.post("/", createCustomer);
-
-router.get("/", getCustomers);
-
-router.get("/:id", getCustomerById);
-
-router.put("/:id", updateCustomer);
+router.post("/", protect, createCustomer);
+router.get("/", protect, getCustomers);
+router.get("/:id", protect, getCustomerById);
+router.put("/:id", protect, updateCustomer);
 
 module.exports = router;

@@ -9,18 +9,36 @@ const {
   getAllReminders,
 } = require("../controllers/reminderController");
 
+const protect = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-router.get("/", getAllReminders)
+router.get("/", protect, getAllReminders);
 
-router.post("/", createReminder);
+router.post("/", protect, createReminder);
 
-router.get("/customer/:customerId", getCustomerReminders);
+router.get(
+  "/customer/:customerId",
+  protect,
+  getCustomerReminders
+);
 
-router.patch("/:reminderId/status", updateReminderStatus);
+router.patch(
+  "/:reminderId/status",
+  protect,
+  updateReminderStatus
+);
 
-router.put("/:reminderId", updateReminder);
+router.put(
+  "/:reminderId",
+  protect,
+  updateReminder
+);
 
-router.delete("/:reminderId", deleteReminder);
+router.delete(
+  "/:reminderId",
+  protect,
+  deleteReminder
+);
 
 module.exports = router;

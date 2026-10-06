@@ -34,7 +34,12 @@ const createPurchaseOrder = async (req, res) => {
     const poProducts = [];
 
     for (const item of products) {
-      const product = await Product.findById(item.product);
+      // IMPORTANT:
+      // Product must belong to the logged-in user
+      const product = await Product.findOne({
+        _id: item.product,
+        user: req.user._id,
+      });
 
       if (!product) {
         return res.status(404).json({
@@ -76,6 +81,10 @@ const createPurchaseOrder = async (req, res) => {
     const poNumber = `PO-${Date.now()}`;
 
     const purchaseOrder = await PurchaseOrder.create({
+      // IMPORTANT:
+      // Save owner
+      user: req.user._id,
+
       poNumber,
       supplier: supplier.trim(),
       products: poProducts,
