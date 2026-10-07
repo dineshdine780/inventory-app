@@ -1,8 +1,11 @@
 const Product = require("../models/Product");
+const {
+  syncLowStockNotification,
+} = require("../services/notificationService");
 
-// ==================================================
+
 // Create Product
-// ==================================================
+
 const createProduct = async (req, res) => {
 
   console.log("REQ.USER:", req.user);
@@ -74,6 +77,8 @@ console.log("REQ.USER.USERID:", req.user?.userId);
       reservedStock: 0,
     });
 
+    await syncLowStockNotification(product);
+
     res.status(201).json({
       success: true,
       message: "Product created successfully",
@@ -90,9 +95,9 @@ console.log("REQ.USER.USERID:", req.user?.userId);
 };
 
 
-// ==================================================
+
 // Get all Products - CURRENT USER ONLY
-// ==================================================
+
 const getProducts = async (req, res) => {
   try {
     const products = await Product.find({
@@ -231,6 +236,8 @@ const updateProduct = async (req, res) => {
     }
 
     await product.save();
+
+    await syncLowStockNotification(product);
 
     res.status(200).json({
       success: true,

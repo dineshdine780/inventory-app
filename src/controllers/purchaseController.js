@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const Purchase = require("../models/Purchase");
 const Product = require("../models/Product");
+const Notification = require("../models/Notification");
 
 const createPurchase = async (req, res) => {
   const session = await mongoose.startSession();
@@ -117,11 +118,32 @@ const createPurchase = async (req, res) => {
 
     await purchase.save({ session });
 
-    // -----------------------------
-    // COMMIT
-    // -----------------------------
+// -----------------------------
+// PURCHASE RECEIVED NOTIFICATION
+// -----------------------------
 
-    await session.commitTransaction();
+await Notification.create(
+  [
+    {
+      user: req.user._id,
+      type: "purchase",
+      title: "Purchase Received",
+      message: `Purchase from ${supplier.trim()} has been recorded successfully. Total amount: ₹${Number(
+        totalAmount
+      )}.`,
+      referenceId: purchase._id,
+      referenceType: "Purchase",
+      isRead: false,
+    },
+  ],
+  { session }
+);
+
+// -----------------------------
+// COMMIT
+// -----------------------------
+
+await session.commitTransaction();
 
     return res.status(201).json({
       success: true,

@@ -1,6 +1,7 @@
 const Reminder = require("../models/Reminder");
 const Customer = require("../models/Customer");
 const Sale = require("../models/Sale");
+const Notification = require("../models/Notification");
 
 // Create Reminder
 const createReminder = async (req, res) => {
@@ -70,6 +71,22 @@ const createReminder = async (req, res) => {
       purpose: purpose.trim(),
       linkedTransaction: linkedTransaction || null,
     });
+
+    // ----------------------------------------
+// REMINDER NOTIFICATION
+// ----------------------------------------
+
+await Notification.create({
+  user: req.user._id,
+  type: "reminder",
+  title: "Reminder Scheduled",
+  message: `${existingCustomer.name}: ${purpose.trim()} on ${new Date(
+    reminderDate
+  ).toLocaleDateString()}.`,
+  referenceId: reminder._id,
+  referenceType: "Reminder",
+  isRead: false,
+});
 
     return res.status(201).json({
       success: true,

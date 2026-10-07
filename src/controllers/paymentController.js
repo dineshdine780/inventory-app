@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Payment = require("../models/Payment");
 const Customer = require("../models/Customer");
 const Sale = require("../models/Sale");
+const Notification = require("../models/Notification");
 
 // ==========================================
 // CREATE PAYMENT
@@ -169,6 +170,34 @@ const createPayment = async (req, res) => {
     );
 
     await customerData.save({ session });
+
+    // ----------------------------------------
+// PAYMENT DUE NOTIFICATION
+// ----------------------------------------
+
+if (customerData.outstanding > 0) {
+  const existingNotification = await Notification.findOne({
+    user: req.user._id,
+    type: "payment",
+    referenceId: customerData._id,
+    referenceType: "Customer",
+    isRead: false,
+  }).session(session);
+
+  if (!existingNotification) {
+    const notification = new Notification({
+      user: req.user._id,
+      type: "payment",
+      title: "Payment Due",
+      message: `${customerData.name} has an outstanding payment of ₹${customerData.outstanding}.`,
+      referenceId: customerData._id,
+      referenceType: "Customer",
+      isRead: false,
+    });
+
+    await notification.save({ session });
+  }
+}
 
     // ----------------------------------------
     // COMMIT TRANSACTION

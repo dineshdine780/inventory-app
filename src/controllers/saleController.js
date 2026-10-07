@@ -4,6 +4,10 @@ const Sale = require("../models/Sale");
 const Product = require("../models/Product");
 const Customer = require("../models/Customer");
 
+const {
+  syncLowStockNotification,
+} = require("../services/notificationService");
+
 const createSale = async (req, res) => {
   const session = await mongoose.startSession();
 
@@ -110,10 +114,13 @@ const createSale = async (req, res) => {
         });
       }
 
-      // Decrease stock
+      
+ 
       product.currentStock -= item.quantity;
 
       await product.save({ session });
+
+       await syncLowStockNotification(product);
     }
 
     // -----------------------------------------

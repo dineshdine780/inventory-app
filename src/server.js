@@ -27,6 +27,7 @@ const taskRoutes = require("./routes/taskRoutes");
 const voiceRoutes = require("./routes/voiceRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const aiSettingsRoutes = require("./routes/aiSettingsRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 dotenv.config();
 
@@ -101,6 +102,7 @@ app.use("/api/tasks", protect, taskRoutes);
 app.use("/api/voice", protect, voiceRoutes);
 app.use("/api/ai", protect, aiRoutes);
 app.use("/api/ai-settings", aiSettingsRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.json({

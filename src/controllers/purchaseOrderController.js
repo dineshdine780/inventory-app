@@ -1,5 +1,6 @@
 const PurchaseOrder = require("../models/PurchaseOrder");
 const Product = require("../models/Product");
+const Notification = require("../models/Notification");
 
 const createPurchaseOrder = async (req, res) => {
   try {
@@ -81,8 +82,6 @@ const createPurchaseOrder = async (req, res) => {
     const poNumber = `PO-${Date.now()}`;
 
     const purchaseOrder = await PurchaseOrder.create({
-      // IMPORTANT:
-      // Save owner
       user: req.user._id,
 
       poNumber,
@@ -92,6 +91,24 @@ const createPurchaseOrder = async (req, res) => {
       expectedDelivery,
       status: status || "Draft",
     });
+    
+
+if (
+  purchaseOrder.status === "Draft" ||
+  purchaseOrder.status === "Pending"
+) {
+  await Notification.create({
+    user: req.user._id,
+    type: "purchase",
+    title: "Purchase Order Pending",
+    message: `Purchase Order ${purchaseOrder.poNumber} is waiting for approval.`,
+    referenceId: purchaseOrder._id,
+    referenceType: "PurchaseOrder",
+    isRead: false,
+  });
+}
+
+
 
     return res.status(201).json({
       success: true,
