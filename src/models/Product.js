@@ -23,8 +23,8 @@ const productSchema = new mongoose.Schema(
 
     sku: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
       trim: true,
       uppercase: true,
     },

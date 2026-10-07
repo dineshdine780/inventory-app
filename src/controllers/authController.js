@@ -3,16 +3,13 @@ const jwt = require("jsonwebtoken");
 const svgCaptcha = require("svg-captcha");
 
 const User = require("../models/User");
+const Purchase = require("../models/Purchase");
 
-// --------------------------------
-// Temporary CAPTCHA Store
-// --------------------------------
+
 
 const captchaStore = new Map();
 
-// --------------------------------
-// Register User
-// --------------------------------
+
 
 const registerUser = async (req, res) => {
   try {
@@ -98,9 +95,9 @@ const registerUser = async (req, res) => {
   }
 };
 
-// --------------------------------
+
 // Generate CAPTCHA
-// --------------------------------
+
 
 const generateCaptcha = (req, res) => {
   try {
@@ -137,11 +134,11 @@ const generateCaptcha = (req, res) => {
       message: "Failed to generate CAPTCHA",
     });
   }
-};
+};  
 
-// --------------------------------
+
 // Login User
-// --------------------------------
+
 
 const loginUser = async (req, res) => {
   try {
@@ -152,9 +149,9 @@ const loginUser = async (req, res) => {
       captchaText,
     } = req.body;
 
-    // --------------------------------
+   
     // Validate CAPTCHA
-    // --------------------------------
+   
 
     if (!captchaId || !captchaText) {
       return res.status(400).json({
@@ -199,9 +196,8 @@ const loginUser = async (req, res) => {
     // CAPTCHA can only be used once
     captchaStore.delete(captchaId);
 
-    // --------------------------------
+    
     // Validate Email
-    // --------------------------------
 
     if (!email || !email.trim()) {
       return res.status(400).json({
@@ -210,9 +206,8 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // --------------------------------
     // Validate Password
-    // --------------------------------
+
 
     if (!password) {
       return res.status(400).json({
@@ -240,9 +235,8 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // --------------------------------
     // Check Active Account
-    // --------------------------------
+  
 
     if (!user.isActive) {
       return res.status(403).json({
@@ -250,10 +244,8 @@ const loginUser = async (req, res) => {
         message: "Account is inactive",
       });
     }
-
-    // --------------------------------
+    
     // Check Password
-    // --------------------------------
 
     const isPasswordValid =
       await bcrypt.compare(
@@ -269,9 +261,9 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // --------------------------------
+  
     // Generate JWT
-    // --------------------------------
+
 
     const token = jwt.sign(
       {
@@ -283,10 +275,8 @@ const loginUser = async (req, res) => {
         expiresIn: "7d",
       }
     );
-
-    // --------------------------------
+   
     // Login Success
-    // --------------------------------
 
     return res.status(200).json({
       success: true,
@@ -314,12 +304,14 @@ const loginUser = async (req, res) => {
   }
 };
 
-// --------------------------------
+
 // Export
-// --------------------------------
+
 
 module.exports = {
   registerUser,
   loginUser,
   generateCaptcha,
 };
+
+
