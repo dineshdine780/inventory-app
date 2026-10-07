@@ -7,10 +7,10 @@ const {
 // Create Product
 
 const createProduct = async (req, res) => {
-
   console.log("REQ.USER:", req.user);
-console.log("REQ.USER._ID:", req.user?._id);
-console.log("REQ.USER.USERID:", req.user?.userId);
+  console.log("REQ.USER._ID:", req.user?._id);
+  console.log("REQ.USER.USERID:", req.user?.userId);
+
   try {
     const {
       productName,
@@ -26,21 +26,20 @@ console.log("REQ.USER.USERID:", req.user?.userId);
     if (
       !productName ||
       !category ||
-      !sku ||
       sellingPrice === undefined ||
-      purchasePrice === undefined
+      sellingPrice === ""
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Product name, category, SKU, selling price and purchase price are required",
+          "Product name, category and selling price are required",
       });
     }
 
     // Validate numbers
     if (
       Number(sellingPrice) < 0 ||
-      Number(purchasePrice) < 0 ||
+      Number(purchasePrice || 0) < 0 ||
       Number(openingStock || 0) < 0 ||
       Number(reorderLevel || 0) < 0
     ) {
@@ -50,29 +49,40 @@ console.log("REQ.USER.USERID:", req.user?.userId);
       });
     }
 
-    // Check duplicate SKU for THIS USER only
-    const existingProduct = await Product.findOne({
-      user: req.user._id,
-      sku: sku.toUpperCase(),
-    });
+    // Clean SKU
+    const cleanSku = sku?.trim()
+      ? sku.trim().toUpperCase()
+      : undefined;
 
-    if (existingProduct) {
-      return res.status(409).json({
-        success: false,
-        message: "A product with this SKU already exists",
+    // Check duplicate SKU only when SKU is provided
+    if (cleanSku) {
+      const existingProduct = await Product.findOne({
+        user: req.user._id,
+        sku: cleanSku,
       });
+
+      if (existingProduct) {
+        return res.status(409).json({
+          success: false,
+          message: "A product with this SKU already exists",
+        });
+      }
     }
 
     const product = await Product.create({
       user: req.user._id,
 
-      productName,
-      category,
-      sku,
+      productName: productName.trim(),
+      category: category.trim(),
+
+      ...(cleanSku && { sku: cleanSku }),
+
       sellingPrice: Number(sellingPrice),
-      purchasePrice: Number(purchasePrice),
+      purchasePrice: Number(purchasePrice || 0),
+
       openingStock: Number(openingStock || 0),
       currentStock: Number(openingStock || 0),
+
       reorderLevel: Number(reorderLevel || 5),
       reservedStock: 0,
     });
@@ -86,6 +96,14 @@ console.log("REQ.USER.USERID:", req.user?.userId);
     });
   } catch (error) {
     console.error("Create product error:", error);
+
+    // Handle duplicate SKU
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "A product with this SKU already exists",
+      });
+    }
 
     res.status(500).json({
       success: false,
@@ -154,9 +172,9 @@ const getProductById = async (req, res) => {
 };
 
 
-// ==================================================
 // Update Product - CURRENT USER ONLY
-// ==================================================
+
+
 const updateProduct = async (req, res) => {
   try {
     const {
@@ -181,6 +199,7 @@ const updateProduct = async (req, res) => {
     }
 
     // Check duplicate SKU for THIS USER only
+
     if (sku && sku.toUpperCase() !== product.sku) {
       const existingProduct = await Product.findOne({
         user: req.user._id,
@@ -255,9 +274,9 @@ const updateProduct = async (req, res) => {
 };
 
 
-// ==================================================
 // Delete Product - CURRENT USER ONLY
-// ==================================================
+
+
 const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findOne({
